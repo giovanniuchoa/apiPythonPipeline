@@ -1,0 +1,51 @@
+trigger:
+  branches:
+    include:
+      - main
+      - develop
+      - release/*
+
+variables:
+  pythonVersion: '3.10'
+  appName: 'grupo-8'             # <- Substitua pelo nome do seu App Service
+  azureSubscription: 'AzureConnection'    # <- Nome da Service Connection
+  packageDirectory: '.'                   # <- Diretório onde está o código
+
+stages:
+  - stage: BuildAndTest
+    displayName: 'Build and Test'
+    jobs:
+      - job: BuildAndTestJob
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: '$(pythonVersion)'
+
+          - script: |
+              python -m venv venv
+              source venv/bin/activate
+              pip install --upgrade pip
+              pip install -r requirements.txt
+              pytest
+            displayName: 'Install dependencies and run tests'
+
+  - stage: Deploy
+    displayName: 'Deploy to Azure'
+    condition: |
+      or(eq(variables['Build.SourceBranch'], 'refs/heads/main'),
+         eq(variables['Build.SourceBranch'], 'refs/heads/develop'),
+         startsWith(variables['Build.SourceBranch'], 'refs/heads/release/'))
+    jobs:
+      - deployment: DeployApp
+        environment: 'production'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: AzureWebApp@1
+                  inputs:
+                    azureSubscription: '$(azureSubscription)'
+                    appName: '$(appName)'
+                    package: '$(packageDirectory)'

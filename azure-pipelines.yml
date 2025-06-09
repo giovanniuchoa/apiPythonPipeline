@@ -28,7 +28,8 @@ stages:
               source venv/bin/activate
               pip install --upgrade pip
               pip install -r requirements.txt
-              pytest
+              export DATABASE_URL="sqlite:///./test.db"
+              python -m pytest tests/ -v
             displayName: 'Install dependencies and run tests'
 
   - stage: Deploy
